@@ -1,0 +1,85 @@
+[tool.black]
+#line-length = 88
+line-length = 73
+
+[tool.coverage.run]
+branch = true
+command_line = "-m pytest"
+omit = [
+  # Usually requires full-fletched set up to use.
+  "*/__main__.py",
+]
+source = [
+  "src",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "@typing.overload",
+]
+fail_under = 100
+show_missing = true
+skip_covered = true
+
+[tool.mypy]
+mypy_path = "src:stubs:tests"
+show_error_codes = true
+strict = true
+
+[tool.pylint.BASIC]
+# Violation of naming convention that should be accepted.
+good-names = [
+  # Used by convention.
+  "_T_co",  # TypeVar name.
+]
+
+[tool.pylint.FORMAT]
+max-line-length = 73
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+  # Not every TODO is urgent. Especially with no issue tracker.
+  "fixme",
+
+  # Global statements are already explicit.
+  # Not using per-case disables
+  # which will end up being used in every case.
+  # By doing a disable here, finding them when necessary will be easier.
+  "global-statement",
+
+  # It does not always make sense to document.
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+
+  # Not used in test classes.
+  # And sometimes having unused self is necessary when subclassing.
+  "no-self-use",
+
+  # Allow intentionally disabled checks.
+  "locally-disabled",
+  "suppressed-message",
+
+  # Not checking based on numbers.
+  "too-few-public-methods",
+  "too-many-ancestors",
+  "too-many-instance-attributes",
+  "too-many-lines",
+  "too-many-public-methods",
+]
+enable = [
+  # Disabled by default.
+  "bad-inline-option",
+  "deprecated-pragma",
+  "file-ignored",
+  "raw-checker-failed",
+  "use-symbolic-message-instead",
+
+  # Ensure future warnings are not hidden.
+  "useless-suppression",
+]
+extension-pkg-whitelist = [
+  # Derive type hints from C extensions.
+  "pydantic",
+]
