@@ -2,14 +2,19 @@
 
 # Standard library.
 from __future__ import annotations
+import collections.abc
 import typing
 
 
-def hello(name: str, *, stdout: typing.TextIO) -> None:
+def hello(
+    name: str, *, echo: collections.abc.Callable[[str], typing.Any]
+) -> None:
     if name:
-        print(f"Hello, {name}!", file=stdout)
+        echo(f"Hello, {name}!")
 
 
-def hello_all(*names: str, stdout: typing.TextIO) -> None:
+def hello_all(
+    *names: str, echo: collections.abc.Callable[[str], typing.Any]
+) -> None:
     for name in names:
-        hello(name, stdout=stdout)
+        hello(name, echo=echo)
