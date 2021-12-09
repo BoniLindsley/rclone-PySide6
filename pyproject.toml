@@ -1,6 +1,7 @@
 [tool.black]
 #line-length = 88
 line-length = 73
+exclude = '\/generated_ui\/'
 
 [tool.coverage.run]
 branch = true
@@ -8,6 +9,7 @@ command_line = "-m pytest"
 omit = [
   # Usually requires full-fletched set up to use.
   "*/__main__.py",
+  "*/generated_ui/*",
 ]
 source = [
   "src",
@@ -27,11 +29,22 @@ mypy_path = "src:stubs:tests"
 show_error_codes = true
 strict = true
 
+[[tool.mypy.overrides]]
+module = "*.generated_ui.*"
+ignore_errors = true
+
 [tool.pylint.BASIC]
 # Violation of naming convention that should be accepted.
 good-names = [
   # Used by convention.
   "_T_co",  # TypeVar name.
+  # PySide6 module.
+  "PySide6",
+  "ui",  # Designer object name convention.
+]
+ignore = [
+  # Cannot control generated outputs.
+  "generated_ui",
 ]
 
 [tool.pylint.FORMAT]
@@ -81,5 +94,6 @@ enable = [
 ]
 extension-pkg-whitelist = [
   # Derive type hints from C extensions.
+  "PySide6",
   "pydantic",
 ]
