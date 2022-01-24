@@ -9,7 +9,6 @@ command_line = "-m pytest"
 omit = [
   # Usually requires full-fletched set up to use.
   "*/__main__.py",
-  "*/generated_ui/*",
 ]
 source = [
   "src",

@@ -66,7 +66,7 @@ def compile_file(
     ui_path: pathlib.Path, *, compiler: str = "pyside6-uic"
 ) -> bytes:
     try:
-        return subprocess.check_output([compiler, ui_path], timeout=2)
+        return subprocess.check_output([compiler, ui_path])
     except subprocess.CalledProcessError as error:
         _logger.error("Failed to compile.\n%s", error.stdout.decode())
         click.get_current_context().exit(1)
