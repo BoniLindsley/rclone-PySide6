@@ -13,12 +13,10 @@
 from __future__ import annotations  # For delayed type expansion < 3.10.
 import collections.abc
 import datetime
-import functools
 import json
 import logging
 import secrets
 import sys
-import threading
 import typing
 
 # External dependencies.
@@ -27,7 +25,6 @@ import PySide6.QtGui
 import PySide6.QtNetwork
 import PySide6.QtWidgets
 import PySide6.QtStateMachine
-import phill.PySide6.QtCore
 
 # Internal modules.
 from .generated_ui.main_window import Ui_MainWindow
@@ -90,13 +87,14 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         dirs_only: bool = False,
         files_only: bool = False,
         hash_types: bool = False,
-    ) -> None:
+    ) -> PySide6.QtNetwork.QNetworkReply:
         data: dict[str, typing.Any] = {
             "fs": remote,
             "remote": path,
         }
         reply = self.post_command("operations/list", data)
         reply.finished.connect(self._on_receive_operations_list_reply)
+        return reply
 
     def _on_receive_operations_list_reply(self) -> None:
         reply: PySide6.QtNetwork.QNetworkReply = self.sender()
@@ -673,9 +671,35 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             self, PySide6.QtWidgets.QListWidget, "remoteListWidget"
         )
         selected_remote_name = list_widget.currentItem().text()
-        self.network_communication.post_operations_list(
+        reply = self.network_communication.post_operations_list(
             f"{selected_remote_name}:", ""
         )
+        reply.finished.connect(
+            self._on_reply_finished_to_remote_item_activated
+        )
+
+    def _on_reply_finished_to_remote_item_activated(self) -> None:
+        reply: PySide6.QtNetwork.QNetworkReply = self.sender()
+        if reply.error() == PySide6.QtNetwork.QNetworkReply.NoError:
+            remote_control_tool_box = find_child(
+                self,
+                PySide6.QtWidgets.QToolBox,
+                "remoteControlToolBox",
+            )
+            browse_page = find_child(
+                self,
+                PySide6.QtWidgets.QWidget,
+                "browsePage",
+            )
+            remote_control_tool_box.setCurrentWidget(browse_page)
+        else:
+            self.statusBar().showMessage(
+                "Failed to list remote.",
+                int(
+                    datetime.timedelta(seconds=2)
+                    / datetime.timedelta(milliseconds=1)
+                ),
+            )
 
     def _set_up_browse_tree_widget(self) -> None:
         signal = (
