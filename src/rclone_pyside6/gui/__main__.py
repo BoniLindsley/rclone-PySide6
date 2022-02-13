@@ -11,7 +11,6 @@
 
 # Standard libraries.
 from __future__ import annotations  # For delayed type expansion < 3.10.
-import collections
 import collections.abc
 import datetime
 import functools
@@ -77,6 +76,40 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         )
         client.finished.connect(self._emit_client_reply_ready)
 
+    def post_operations_list(
+        self,
+        remote: str,
+        path: str,
+        *,
+        recurse: bool = False,
+        no_mod_time: bool = False,
+        show_encrypted: bool = False,
+        show_orig_ids: bool = False,
+        show_hash: bool = False,
+        no_mime_type: bool = False,
+        dirs_only: bool = False,
+        files_only: bool = False,
+        hash_types: bool = False,
+    ) -> None:
+        data: dict[str, typing.Any] = {
+            "fs": remote,
+            "remote": path,
+        }
+        reply = self.post_command("operations/list", data)
+        reply.finished.connect(self._on_receive_operations_list_reply)
+
+    def _on_receive_operations_list_reply(self) -> None:
+        reply: PySide6.QtNetwork.QNetworkReply = self.sender()
+        try:
+            json_data = json.loads(reply.readAll().data())
+        except json.JSONDecodeError:
+            json_data = {}
+        dir_list = json_data.get("list", [])
+        signal = self.received_operations_list_reply
+        signal.emit(dir_list)  # type: ignore[attr-defined]
+
+    received_operations_list_reply = PySide6.QtCore.Signal(list)
+
     def post_config_listremotes(self) -> None:
         reply = self.post_command("config/listremotes")
         reply.finished.connect(self._on_receive_config_listremotes_reply)
@@ -86,8 +119,8 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         try:
             json_data = json.loads(reply.readAll().data())
         except json.JSONDecodeError:
-            json_data = {"remotes": []}
-        remotes = json_data["remotes"]
+            json_data = {}
+        remotes = json_data.get("remotes", [])
         signal = self.received_config_listremotes_reply
         signal.emit(remotes)  # type: ignore[attr-defined]
 
@@ -281,9 +314,9 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         Ui_MainWindow().setupUi(self)  # type: ignore[no-untyped-call]
-        self._remote_widget_items = collections.defaultdict[
+        self._remote_widget_items: dict[
             str, PySide6.QtWidgets.QListWidgetItem
-        ](PySide6.QtWidgets.QListWidgetItem)
+        ] = {}
         self.state_machine = state_machine = MainWindowStateMachine(self)
         self.network_communication = NetworkCommunication(self)
         self._set_up_states()
@@ -312,6 +345,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         self._set_up_server_log_plain_text_edit()
         self._set_up_remotes_connection_push_button()
         self._set_up_remote_list_widget()
+        self._set_up_browse_tree_widget()
 
     def _set_up_network_communication(self) -> None:
         communication = self.network_communication
@@ -603,6 +637,12 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         signal.connect(  # type: ignore[attr-defined]
             self._update_remote_list_widget_list
         )
+        list_widget = find_child(
+            self, PySide6.QtWidgets.QListWidget, "remoteListWidget"
+        )
+        list_widget.itemActivated.connect(
+            self._on_remote_list_widget_item_activated
+        )
 
     def _update_remote_list_widget_list(
         self, remotes: collections.abc.Iterable[str]
@@ -624,17 +664,47 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             self, PySide6.QtWidgets.QListWidget, "remoteListWidget"
         )
         for remote in remotes_to_add:
-            item = widget_items[remote]
-            item.setText(remote)
-            list_widget.addItem(item)
+            widget_items[remote] = PySide6.QtWidgets.QListWidgetItem(
+                remote, list_widget
+            )
+
+    def _on_remote_list_widget_item_activated(self) -> None:
+        list_widget = find_child(
+            self, PySide6.QtWidgets.QListWidget, "remoteListWidget"
+        )
+        selected_remote_name = list_widget.currentItem().text()
+        self.network_communication.post_operations_list(
+            f"{selected_remote_name}:", ""
+        )
+
+    def _set_up_browse_tree_widget(self) -> None:
+        signal = (
+            self.network_communication.received_operations_list_reply
+        )
+        signal.connect(  # type: ignore[attr-defined]
+            self._update_browse_tree_widget_list
+        )
+
+    def _update_browse_tree_widget_list(
+        self, files: collections.abc.Iterable[dict[str, typing.Any]]
+    ) -> None:
+        tree_widget = find_child(
+            self,
+            PySide6.QtWidgets.QTreeWidget,
+            "browseTreeWidget",
+        )
+        tree_widget.clear()
+        for file in files:
+            name = file.get("Name")
+            if name is not None:
+                item = PySide6.QtWidgets.QTreeWidgetItem(
+                    tree_widget, [name]
+                )
 
 
 def main() -> int:
     qt_app = PySide6.QtWidgets.QApplication()
     main_window = MainWindow()
-    # tree_widget = main_window.ui.centralwidget
-    # tree_widget.setHeaderLabels(["Name", "Type"])
-    # add_data(tree_widget)
     main_window.show()
     return qt_app.exec()
 
