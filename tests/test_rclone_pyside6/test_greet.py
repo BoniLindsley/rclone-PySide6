@@ -13,7 +13,7 @@ class TestHello:
     def test_prints_nothing_if_name_is_blank(self) -> None:
         stdout_buffer: list[str] = []
         rclone_pyside6.greet.hello("", echo=stdout_buffer.append)
-        assert stdout_buffer == []
+        assert not stdout_buffer
 
 
 class TestHelloAll:
@@ -31,4 +31,4 @@ class TestHelloAll:
     def test_prints_nothing_if_no_name_given(self) -> None:
         stdout_buffer: list[str] = []
         rclone_pyside6.greet.hello_all(echo=stdout_buffer.append)
-        assert stdout_buffer == []
+        assert not stdout_buffer

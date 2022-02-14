@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-# mypy notes:
+# Pylint notes:
 #
-# -   [arg-type]: QState.assignProperty argument 2 wants bytes at runtime
-#     but wants str when type checking.
-# -   [attr-definied] Signal.emit and Signal.connect is not in type hint.
-#     Related issue says fixed, but likely not released:
-#     <https://bugreports.qt.io/browse/PYSIDE-1318>.
-#     Expected in PySide6 6.2.3, Due end of January 2022.
+# -   TODO[pylint issue 5378]: disable=no-member `connect` for `Signal`.
+#
+# mypy notes:
+# -   ignore[arg-type]: QState.assignProperty argument 2
+#     wants bytes at runtime but wants str when type checking.
 
 # Standard libraries.
 from __future__ import annotations  # For delayed type expansion < 3.10.
@@ -59,34 +58,30 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         self._password = ""
         self._host_process = host_process = PySide6.QtCore.QProcess()
         host_process.setProgram("rclone")
-        signal = host_process.finished
-        signal.connect(self._emit_host_finished)
-        host_process.readyReadStandardError.connect(
+        # TODO[pylint issue 5378]: no member `connect` for `Signal`.
+        host_process.finished.connect(  # pylint: disable=no-member
+            self._emit_host_finished
+        )
+        signal = host_process.readyReadStandardError
+        signal.connect(  # pylint: disable=no-member
             self._emit_host_stderr_ready
         )
-        host_process.readyReadStandardOutput.connect(
+        signal = host_process.readyReadStandardOutput
+        signal.connect(  # pylint: disable=no-member
             self._emit_host_stdout_ready
         )
         self._client = client = PySide6.QtNetwork.QNetworkAccessManager()
-        client.authenticationRequired.connect(
+        signal = client.authenticationRequired
+        signal.connect(  # pylint: disable=no-member
             self._on_authentication_required
         )
-        client.finished.connect(self._emit_client_reply_ready)
+        signal = client.finished
+        signal.connect(  # pylint: disable=no-member
+            self._emit_client_reply_ready
+        )
 
     def post_operations_list(
-        self,
-        remote: str,
-        path: str,
-        *,
-        recurse: bool = False,
-        no_mod_time: bool = False,
-        show_encrypted: bool = False,
-        show_orig_ids: bool = False,
-        show_hash: bool = False,
-        no_mime_type: bool = False,
-        dirs_only: bool = False,
-        files_only: bool = False,
-        hash_types: bool = False,
+        self, remote: str, path: str
     ) -> PySide6.QtNetwork.QNetworkReply:
         data: dict[str, typing.Any] = {
             "fs": remote,
@@ -103,8 +98,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         except json.JSONDecodeError:
             json_data = {}
         dir_list = json_data.get("list", [])
-        signal = self.received_operations_list_reply
-        signal.emit(dir_list)  # type: ignore[attr-defined]
+        self.received_operations_list_reply.emit(dir_list)
 
     received_operations_list_reply = PySide6.QtCore.Signal(list)
 
@@ -119,8 +113,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         except json.JSONDecodeError:
             json_data = {}
         remotes = json_data.get("remotes", [])
-        signal = self.received_config_listremotes_reply
-        signal.emit(remotes)  # type: ignore[attr-defined]
+        self.received_config_listremotes_reply.emit(remotes)
 
     received_config_listremotes_reply = PySide6.QtCore.Signal(list)
 
@@ -146,8 +139,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
                 "application/json",
             )
         reply = self._client.post(request, encoded_data)
-        signal = self.client_request_sent
-        signal.emit(reply)  # type: ignore[attr-defined]
+        self.client_request_sent.emit(reply)
         return reply
 
     client_request_sent = PySide6.QtCore.Signal(
@@ -158,8 +150,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
     def _emit_client_reply_ready(
         self, reply: PySide6.QtNetwork.QNetworkReply
     ) -> None:
-        signal = self.client_reply_ready
-        signal.emit(reply)  # type: ignore[attr-defined]
+        self.client_reply_ready.emit(reply)
 
     client_reply_ready = PySide6.QtCore.Signal(
         PySide6.QtNetwork.QNetworkReply
@@ -184,7 +175,9 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         if self.is_host_running():
             return
         host_process = self._host_process
-        host_process.readyReadStandardError.connect(
+        # TODO[pylint issue 5378]: no member `connect` for `Signal`.
+        signal = host_process.readyReadStandardError
+        signal.connect(  # pylint: disable=no-member
             self._on_host_first_standard_error_ready,
             type=PySide6.QtCore.Qt.ConnectionType.SingleShotConnection,
         )
@@ -217,23 +210,20 @@ class NetworkCommunication(PySide6.QtCore.QObject):
 
     @PySide6.QtCore.Slot()
     def _emit_host_finished(self) -> None:
-        signal = self.host_finished
-        signal.emit()  # type: ignore[attr-defined]
+        self.host_finished.emit()
 
     host_finished = PySide6.QtCore.Signal()
 
     @PySide6.QtCore.Slot()
     def _on_host_first_standard_error_ready(self) -> None:
-        signal = self.host_ready
-        signal.emit()  # type: ignore[attr-defined]
+        self.host_ready.emit()
         self.post_config_listremotes()
 
     host_ready = PySide6.QtCore.Signal()
 
     @PySide6.QtCore.Slot()
     def _emit_host_stderr_ready(self) -> None:
-        signal = self.host_stderr_ready
-        signal.emit(  # type: ignore[attr-defined]
+        self.host_stderr_ready.emit(
             self._host_process.readAllStandardError().data().decode()
         )
 
@@ -241,8 +231,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
 
     @PySide6.QtCore.Slot()
     def _emit_host_stdout_ready(self) -> None:
-        signal = self.host_stdout_ready
-        signal.emit(  # type: ignore[attr-defined]
+        self.host_stdout_ready.emit(
             self._host_process.readAllStandardOutput().data().decode()
         )
 
@@ -324,12 +313,15 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
     def closeEvent(self, event: PySide6.QtGui.QCloseEvent) -> None:
         communication = self.network_communication
         if not communication.is_host_running():
-            return super().closeEvent(event)
+            super().closeEvent(event)
+            return
         communication = self.network_communication
-        signal = communication.host_finished
-        signal.connect(  # type: ignore[attr-defined]
+        connection_type = (
+            PySide6.QtCore.Qt.ConnectionType.SingleShotConnection
+        )
+        communication.host_finished.connect(
             self.close,
-            type=PySide6.QtCore.Qt.ConnectionType.SingleShotConnection,
+            connection_type,  # type: ignore[arg-type]
         )
         communication.kill_host()
         event.ignore()
@@ -348,10 +340,13 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
     def _set_up_network_communication(self) -> None:
         communication = self.network_communication
         state_machine = self.state_machine
-        state_machine.host_disabled.entered.connect(
+        # TODO[pylint issue 5378]: no member `connect` for `Signal`.
+        signal = state_machine.host_disabled.entered
+        signal.connect(  # pylint: disable=no-member
             communication.kill_host
         )
-        state_machine.host_starting.entered.connect(
+        signal = state_machine.host_starting.entered
+        signal.connect(  # pylint: disable=no-member
             communication.start_host
         )
         state_machine.host_starting.addTransition(
@@ -362,14 +357,16 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             communication.host_finished,
             state_machine.host_stopped,
         )
-        state_machine.host_stopping.entered.connect(
+        signal = state_machine.host_stopping.entered
+        signal.connect(  # pylint: disable=no-member
             communication.kill_host
         )
         state_machine.host_stopping.addTransition(
             communication.host_finished,
             state_machine.host_stopped,
         )
-        state_machine.host_disabled.entered.connect(
+        signal = state_machine.host_disabled.entered
+        signal.connect(  # pylint: disable=no-member
             communication.kill_host
         )
 
@@ -515,12 +512,10 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             PySide6.QtWidgets.QPlainTextEdit,
             "hostLogPlainTextEdit",
         )
-        signal = communication.host_stderr_ready
-        signal.connect(  # type: ignore[attr-defined]
+        communication.host_stderr_ready.connect(
             log_text_edit.appendPlainText
         )
-        signal = communication.host_stdout_ready
-        signal.connect(  # type: ignore[attr-defined]
+        communication.host_stdout_ready.connect(
             log_text_edit.appendPlainText
         )
 
@@ -544,17 +539,10 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
 
     def _set_up_server_log_plain_text_edit(self) -> None:
         communication = self.network_communication
-        log_text_edit = find_child(
-            self,
-            PySide6.QtWidgets.QPlainTextEdit,
-            "serverLogPlainTextEdit",
-        )
-        signal = communication.client_request_sent
-        signal.connect(  # type: ignore[attr-defined]
+        communication.client_request_sent.connect(
             self._log_client_request
         )
-        signal = communication.client_reply_ready
-        signal.connect(  # type: ignore[attr-defined]
+        communication.client_reply_ready.connect(
             self._log_client_received_reply
         )
 
@@ -632,9 +620,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         signal = (
             self.network_communication.received_config_listremotes_reply
         )
-        signal.connect(  # type: ignore[attr-defined]
-            self._update_remote_list_widget_list
-        )
+        signal.connect(self._update_remote_list_widget_list)
         list_widget = find_child(
             self, PySide6.QtWidgets.QListWidget, "remoteListWidget"
         )
@@ -705,9 +691,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         signal = (
             self.network_communication.received_operations_list_reply
         )
-        signal.connect(  # type: ignore[attr-defined]
-            self._update_browse_tree_widget_list
-        )
+        signal.connect(self._update_browse_tree_widget_list)
 
     def _update_browse_tree_widget_list(
         self, files: collections.abc.Iterable[dict[str, typing.Any]]
@@ -721,9 +705,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         for file in files:
             name = file.get("Name")
             if name is not None:
-                item = PySide6.QtWidgets.QTreeWidgetItem(
-                    tree_widget, [name]
-                )
+                PySide6.QtWidgets.QTreeWidgetItem(tree_widget, [name])
 
 
 def main() -> int:

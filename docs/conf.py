@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+# Sphinx uses uses module scope variables for configuration.
+# These variables have lower case names.
+# But Pylint wants upper case for module scope constants.
+# pylint: disable=invalid-name
+
 # # Sphinx configuration file
 
 import pathlib
@@ -21,7 +26,7 @@ The author name(s) of the document.
 The default value is 'unknown'.
 """
 
-copyright = "Boni Lindsley"
+copyright = "Boni Lindsley"  # pylint: disable=redefined-builtin
 """A copyright statement in the style '2008, Author Name'."""
 
 # ## General configuration
