@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 # Standard libraries.
+import ast
 import collections.abc
 import gettext
+import itertools
 import logging
 import pathlib
 import subprocess
@@ -102,6 +104,40 @@ def update(compiler: str) -> None:
         ui_module_path.write_bytes(ui_code)
 
 
+def compare_ast(node: ast.AST, other: ast.AST) -> bool:
+    ignored_fields = {
+        "lineno",
+        "col_offset",
+        "end_lineno",
+        "end_col_offset",
+    }
+    for child, other_child in itertools.zip_longest(
+        ast.walk(node), ast.walk(other)
+    ):
+        if type(child) != type(  # pylint: disable=unidiomatic-typecheck
+            other_child
+        ):
+            return False
+        available_field_names = set(child._fields)
+        if available_field_names != set(other_child._fields):
+            return False
+        available_field_names.difference_update(ignored_fields)
+        for field_name in available_field_names:
+            child_field = getattr(child, field_name)
+            other_child_field = getattr(other_child, field_name)
+            if type(child_field) != type(  # pylint: disable=unidiomatic-typecheck
+                other_child_field
+            ):
+                return False
+            if isinstance(child_field, ast.AST):
+                continue
+            if isinstance(child_field, list):
+                continue
+            if child_field != other_child_field:
+                return False
+    return True
+
+
 @group.command()
 @compiler_option()
 def check(compiler: str) -> None:
@@ -113,7 +149,11 @@ def check(compiler: str) -> None:
             ui_module_code = ui_module_path.read_bytes()
         except FileNotFoundError:
             ui_module_code = b""
-        if ui_module_code != ui_code:
+        if ui_module_code == ui_code:
+            continue
+        ui_ast = ast.parse(ui_code)
+        ui_module_ast = ast.parse(ui_module_code)
+        if not compare_ast(ui_module_ast, ui_ast):
             _logger.error("Outdated %s", ui_module_path)
             click.get_current_context().exit(1)
 
