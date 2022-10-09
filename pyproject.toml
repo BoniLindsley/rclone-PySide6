@@ -65,10 +65,6 @@ disable = [
   "missing-function-docstring",
   "missing-module-docstring",
 
-  # Not used in test classes.
-  # And sometimes having unused self is necessary when subclassing.
-  "no-self-use",
-
   # Allow intentionally disabled checks.
   "locally-disabled",
   "suppressed-message",
@@ -79,6 +75,9 @@ disable = [
   "too-many-instance-attributes",
   "too-many-lines",
   "too-many-public-methods",
+
+  # Temporary control to before moving to 88 columns.
+  "line-too-long",
 ]
 enable = [
   # Disabled by default.

@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-# Pylint notes:
-#
-# -   TODO[pylint issue 5378]: disable=no-member `connect` for `Signal`.
-#
 # mypy notes:
 # -   ignore[arg-type]: QState.assignProperty argument 2
 #     wants bytes at runtime but wants str when type checking.
+# -   ignore[attr-defined]: PySide6 signals are not always defined.
 
 # Standard libraries.
 from __future__ import annotations  # For delayed type expansion < 3.10.
@@ -58,27 +55,18 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         self._password = ""
         self._host_process = host_process = PySide6.QtCore.QProcess()
         host_process.setProgram("rclone")
-        # TODO[pylint issue 5378]: no member `connect` for `Signal`.
-        host_process.finished.connect(  # pylint: disable=no-member
+        host_process.finished.connect(  # type: ignore[attr-defined]
             self._emit_host_finished
         )
-        signal = host_process.readyReadStandardError
-        signal.connect(  # pylint: disable=no-member
-            self._emit_host_stderr_ready
-        )
-        signal = host_process.readyReadStandardOutput
-        signal.connect(  # pylint: disable=no-member
-            self._emit_host_stdout_ready
-        )
+        signal = host_process.readyReadStandardError  # type: ignore[attr-defined]
+        signal.connect(self._emit_host_stderr_ready)
+        signal = host_process.readyReadStandardOutput  # type: ignore[attr-defined]
+        signal.connect(self._emit_host_stdout_ready)
         self._client = client = PySide6.QtNetwork.QNetworkAccessManager()
-        signal = client.authenticationRequired
-        signal.connect(  # pylint: disable=no-member
-            self._on_authentication_required
-        )
-        signal = client.finished
-        signal.connect(  # pylint: disable=no-member
-            self._emit_client_reply_ready
-        )
+        signal = client.authenticationRequired  # type: ignore[attr-defined]
+        signal.connect(self._on_authentication_required)
+        signal = client.finished  # type: ignore[attr-defined]
+        signal.connect(self._emit_client_reply_ready)
 
     def post_operations_list(
         self, remote: str, path: str
@@ -88,11 +76,14 @@ class NetworkCommunication(PySide6.QtCore.QObject):
             "remote": path,
         }
         reply = self.post_command("operations/list", data)
-        reply.finished.connect(self._on_receive_operations_list_reply)
+        signal = reply.finished  # type: ignore[attr-defined]
+        signal.connect(self._on_receive_operations_list_reply)
         return reply
 
     def _on_receive_operations_list_reply(self) -> None:
-        reply: PySide6.QtNetwork.QNetworkReply = self.sender()
+        reply = typing.cast(
+            PySide6.QtNetwork.QNetworkReply, self.sender()
+        )
         try:
             json_data = json.loads(reply.readAll().data())
         except json.JSONDecodeError:
@@ -104,10 +95,13 @@ class NetworkCommunication(PySide6.QtCore.QObject):
 
     def post_config_listremotes(self) -> None:
         reply = self.post_command("config/listremotes")
-        reply.finished.connect(self._on_receive_config_listremotes_reply)
+        signal = reply.finished  # type: ignore[attr-defined]
+        signal.connect(self._on_receive_config_listremotes_reply)
 
     def _on_receive_config_listremotes_reply(self) -> None:
-        reply: PySide6.QtNetwork.QNetworkReply = self.sender()
+        reply = typing.cast(
+            PySide6.QtNetwork.QNetworkReply, self.sender()
+        )
         try:
             json_data = json.loads(reply.readAll().data())
         except json.JSONDecodeError:
@@ -175,9 +169,8 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         if self.is_host_running():
             return
         host_process = self._host_process
-        # TODO[pylint issue 5378]: no member `connect` for `Signal`.
-        signal = host_process.readyReadStandardError
-        signal.connect(  # pylint: disable=no-member
+        signal = host_process.readyReadStandardError  # type: ignore[attr-defined]
+        signal.connect(
             self._on_host_first_standard_error_ready,
             type=PySide6.QtCore.Qt.ConnectionType.SingleShotConnection,
         )
@@ -319,10 +312,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         connection_type = (
             PySide6.QtCore.Qt.ConnectionType.SingleShotConnection
         )
-        communication.host_finished.connect(
-            self.close,
-            connection_type,  # type: ignore[arg-type]
-        )
+        communication.host_finished.connect(self.close, connection_type)
         communication.kill_host()
         event.ignore()
 
@@ -340,15 +330,10 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
     def _set_up_network_communication(self) -> None:
         communication = self.network_communication
         state_machine = self.state_machine
-        # TODO[pylint issue 5378]: no member `connect` for `Signal`.
-        signal = state_machine.host_disabled.entered
-        signal.connect(  # pylint: disable=no-member
-            communication.kill_host
-        )
-        signal = state_machine.host_starting.entered
-        signal.connect(  # pylint: disable=no-member
-            communication.start_host
-        )
+        signal = state_machine.host_disabled.entered  # type: ignore[attr-defined]
+        signal.connect(communication.kill_host)
+        signal = state_machine.host_starting.entered  # type: ignore[attr-defined]
+        signal.connect(communication.start_host)
         state_machine.host_starting.addTransition(
             communication.host_ready,
             state_machine.host_started,
@@ -357,25 +342,22 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             communication.host_finished,
             state_machine.host_stopped,
         )
-        signal = state_machine.host_stopping.entered
-        signal.connect(  # pylint: disable=no-member
-            communication.kill_host
-        )
+        signal = state_machine.host_stopping.entered  # type: ignore[attr-defined]
+        signal.connect(communication.kill_host)
         state_machine.host_stopping.addTransition(
             communication.host_finished,
             state_machine.host_stopped,
         )
-        signal = state_machine.host_disabled.entered
-        signal.connect(  # pylint: disable=no-member
-            communication.kill_host
-        )
+        signal = state_machine.host_disabled.entered  # type: ignore[attr-defined]
+        signal.connect(communication.kill_host)
 
     def _set_up_connection_group_box(self) -> None:
         communication = self.network_communication
         group = find_child(
             self, PySide6.QtWidgets.QGroupBox, "connectionGroupBox"
         )
-        group.toggled.connect(communication.set_address_port_enabled)
+        signal = group.toggled  # type: ignore[attr-defined]
+        signal.connect(communication.set_address_port_enabled)
         communication.set_address_port_enabled(group.isChecked())
         state_machine = self.state_machine
         state_machine.host_stopped.assignProperty(
@@ -392,7 +374,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             self, PySide6.QtWidgets.QLineEdit, "addressLineEdit"
         )
         slot = self.network_communication.set_address
-        line_edit.textChanged.connect(slot)
+        line_edit.textChanged.connect(slot)  # type: ignore[attr-defined]
         slot(line_edit.text())
 
     def _set_up_port_spin_box(self) -> None:
@@ -400,7 +382,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         spin_box = find_child(
             self, PySide6.QtWidgets.QSpinBox, "portSpinBox"
         )
-        spin_box.textChanged.connect(slot)
+        spin_box.textChanged.connect(slot)  # type: ignore[attr-defined]
         slot(spin_box.value())
 
     def _set_up_authentication_group_box(self) -> None:
@@ -408,7 +390,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         group = find_child(
             self, PySide6.QtWidgets.QGroupBox, "authenticationGroupBox"
         )
-        group.toggled.connect(slot)
+        group.toggled.connect(slot)  # type: ignore[attr-defined]
         slot(group.isChecked())
         state_machine = self.state_machine
         state_machine.host_stopped.assignProperty(
@@ -426,14 +408,14 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         line_edit = find_child(
             self, PySide6.QtWidgets.QLineEdit, "realmLineEdit"
         )
-        line_edit.textChanged.connect(slot)
+        line_edit.textChanged.connect(slot)  # type: ignore[attr-defined]
         slot(line_edit.text())
 
     def _set_up_user_line_edit(self) -> None:
         line_edit = find_child(
             self, PySide6.QtWidgets.QLineEdit, "userLineEdit"
         )
-        line_edit.textChanged.connect(
+        line_edit.textChanged.connect(  # type: ignore[attr-defined]
             self.network_communication.set_user
         )
         line_edit.setText(secrets.token_urlsafe())
@@ -442,7 +424,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         line_edit = find_child(
             self, PySide6.QtWidgets.QLineEdit, "passwordLineEdit"
         )
-        line_edit.textChanged.connect(
+        line_edit.textChanged.connect(  # type: ignore[attr-defined]
             self.network_communication.set_password
         )
         line_edit.setText(secrets.token_urlsafe())
@@ -456,10 +438,10 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             group, "checked", False  # type: ignore[arg-type]
         )
         state_machine.host_disabled.addTransition(
-            group.clicked, state_machine.host_stopped
+            group.clicked, state_machine.host_stopped  # type: ignore[attr-defined]
         )
         state_machine.host_stopped.addTransition(
-            group.clicked, state_machine.host_disabled
+            group.clicked, state_machine.host_disabled  # type: ignore[attr-defined]
         )
         state_machine.host_stopped.assignProperty(
             group, "checked", True  # type: ignore[arg-type]
@@ -487,22 +469,22 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             button, "text", "Start"  # type: ignore[arg-type]
         )
         state_machine.host_stopped.addTransition(
-            button.clicked, state_machine.host_starting
+            button.clicked, state_machine.host_starting  # type: ignore[attr-defined]
         )
         state_machine.host_starting.assignProperty(
             button, "text", "Stop"  # type: ignore[arg-type]
         )
         state_machine.host_starting.addTransition(
-            button.clicked, state_machine.host_stopping
+            button.clicked, state_machine.host_stopping  # type: ignore[attr-defined]
         )
         state_machine.host_started.addTransition(
-            button.clicked, state_machine.host_stopping
+            button.clicked, state_machine.host_stopping  # type: ignore[attr-defined]
         )
         state_machine.host_stopping.assignProperty(
             button, "text", "Force stop"  # type: ignore[arg-type]
         )
         state_machine.host_stopping.addTransition(
-            button.clicked, state_machine.host_stopped
+            button.clicked, state_machine.host_stopped  # type: ignore[attr-defined]
         )
 
     def _set_up_host_log_plain_text_edit(self) -> None:
@@ -525,7 +507,8 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             PySide6.QtWidgets.QPushButton,
             "serverStatusPushButton",
         )
-        button.pressed.connect(self.network_communication.post_rc_noop)
+        signal = button.pressed  # type: ignore[attr-defined]
+        signal.connect(self.network_communication.post_rc_noop)
         state_machine = self.state_machine
         state_machine.host_disabled.assignProperty(
             button, "enabled", True  # type: ignore[arg-type]
@@ -591,7 +574,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             PySide6.QtWidgets.QPushButton,
             "remotesConnectionPushButton",
         )
-        button.pressed.connect(
+        button.pressed.connect(  # type: ignore[attr-defined]
             self._on_remotes_connection_push_button_pressed
         )
         state_machine = self.state_machine
@@ -602,7 +585,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             button, "text", "Start"  # type: ignore[arg-type]
         )
         state_machine.host_stopped.addTransition(
-            button.clicked, state_machine.host_starting
+            button.clicked, state_machine.host_starting  # type: ignore[attr-defined]
         )
         state_machine.host_starting.assignProperty(
             button, "text", "Refresh"  # type: ignore[arg-type]
@@ -624,7 +607,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         list_widget = find_child(
             self, PySide6.QtWidgets.QListWidget, "remoteListWidget"
         )
-        list_widget.itemActivated.connect(
+        list_widget.itemActivated.connect(  # type: ignore[attr-defined]
             self._on_remote_list_widget_item_activated
         )
 
@@ -641,7 +624,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             (widget_items.get(remote) for remote in remotes_to_remove),
         )
         for item in items_to_remove:
-            item.deleteLater()
+            item.deleteLater()  # type: ignore[attr-defined]
 
         remotes_to_add = updated_remotes.difference(widget_items.keys())
         list_widget = find_child(
@@ -660,12 +643,13 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         reply = self.network_communication.post_operations_list(
             f"{selected_remote_name}:", ""
         )
-        reply.finished.connect(
-            self._on_reply_finished_to_remote_item_activated
-        )
+        signal = reply.finished  # type: ignore[attr-defined]
+        signal.connect(self._on_reply_finished_to_remote_item_activated)
 
     def _on_reply_finished_to_remote_item_activated(self) -> None:
-        reply: PySide6.QtNetwork.QNetworkReply = self.sender()
+        reply = typing.cast(
+            PySide6.QtNetwork.QNetworkReply, self.sender()
+        )
         if reply.error() == PySide6.QtNetwork.QNetworkReply.NoError:
             remote_control_tool_box = find_child(
                 self,
