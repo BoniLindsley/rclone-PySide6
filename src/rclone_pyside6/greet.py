@@ -6,15 +6,11 @@ import collections.abc
 import typing
 
 
-def hello(
-    name: str, *, echo: collections.abc.Callable[[str], typing.Any]
-) -> None:
+def hello(name: str, *, echo: collections.abc.Callable[[str], typing.Any]) -> None:
     if name:
         echo(f"Hello, {name}!")
 
 
-def hello_all(
-    *names: str, echo: collections.abc.Callable[[str], typing.Any]
-) -> None:
+def hello_all(*names: str, echo: collections.abc.Callable[[str], typing.Any]) -> None:
     for name in names:
         hello(name, echo=echo)

@@ -34,9 +34,7 @@ class ChildNotFound(Exception):
     pass
 
 
-def find_child(
-    parent: PySide6.QtCore.QObject, type_: type[_T_co], name: str
-) -> _T_co:
+def find_child(parent: PySide6.QtCore.QObject, type_: type[_T_co], name: str) -> _T_co:
     child = typing.cast(_T_co, parent.findChild(type_, name))
     if child is None:
         raise ChildNotFound(f"Unable to find {type_} named {name}.")
@@ -81,9 +79,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         return reply
 
     def _on_receive_operations_list_reply(self) -> None:
-        reply = typing.cast(
-            PySide6.QtNetwork.QNetworkReply, self.sender()
-        )
+        reply = typing.cast(PySide6.QtNetwork.QNetworkReply, self.sender())
         try:
             json_data = json.loads(reply.readAll().data())
         except json.JSONDecodeError:
@@ -99,9 +95,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         signal.connect(self._on_receive_config_listremotes_reply)
 
     def _on_receive_config_listremotes_reply(self) -> None:
-        reply = typing.cast(
-            PySide6.QtNetwork.QNetworkReply, self.sender()
-        )
+        reply = typing.cast(PySide6.QtNetwork.QNetworkReply, self.sender())
         try:
             json_data = json.loads(reply.readAll().data())
         except json.JSONDecodeError:
@@ -121,9 +115,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
     ) -> PySide6.QtNetwork.QNetworkReply:
         request = PySide6.QtNetwork.QNetworkRequest()
         address = self._address or "localhost"
-        url = PySide6.QtCore.QUrl(
-            f"http://{address}:{self._port}/{command}"
-        )
+        url = PySide6.QtCore.QUrl(f"http://{address}:{self._port}/{command}")
         request.setUrl(url)
         encoded_data = b""
         if data is not None:
@@ -136,19 +128,13 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         self.client_request_sent.emit(reply)
         return reply
 
-    client_request_sent = PySide6.QtCore.Signal(
-        PySide6.QtNetwork.QNetworkReply
-    )
+    client_request_sent = PySide6.QtCore.Signal(PySide6.QtNetwork.QNetworkReply)
 
     @PySide6.QtCore.Slot(PySide6.QtNetwork.QNetworkReply)
-    def _emit_client_reply_ready(
-        self, reply: PySide6.QtNetwork.QNetworkReply
-    ) -> None:
+    def _emit_client_reply_ready(self, reply: PySide6.QtNetwork.QNetworkReply) -> None:
         self.client_reply_ready.emit(reply)
 
-    client_reply_ready = PySide6.QtCore.Signal(
-        PySide6.QtNetwork.QNetworkReply
-    )
+    client_reply_ready = PySide6.QtCore.Signal(PySide6.QtNetwork.QNetworkReply)
 
     def _on_authentication_required(
         self,
@@ -294,9 +280,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         Ui_MainWindow().setupUi(self)  # type: ignore[no-untyped-call]
-        self._remote_widget_items: dict[
-            str, PySide6.QtWidgets.QListWidgetItem
-        ] = {}
+        self._remote_widget_items: dict[str, PySide6.QtWidgets.QListWidgetItem] = {}
         self.state_machine = state_machine = MainWindowStateMachine(self)
         self.network_communication = NetworkCommunication(self)
         self._set_up_states()
@@ -309,9 +293,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             super().closeEvent(event)
             return
         communication = self.network_communication
-        connection_type = (
-            PySide6.QtCore.Qt.ConnectionType.SingleShotConnection
-        )
+        connection_type = PySide6.QtCore.Qt.ConnectionType.SingleShotConnection
         communication.host_finished.connect(self.close, connection_type)
         communication.kill_host()
         event.ignore()
@@ -353,9 +335,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
 
     def _set_up_connection_group_box(self) -> None:
         communication = self.network_communication
-        group = find_child(
-            self, PySide6.QtWidgets.QGroupBox, "connectionGroupBox"
-        )
+        group = find_child(self, PySide6.QtWidgets.QGroupBox, "connectionGroupBox")
         signal = group.toggled  # type: ignore[attr-defined]
         signal.connect(communication.set_address_port_enabled)
         communication.set_address_port_enabled(group.isChecked())
@@ -370,26 +350,20 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         self._set_up_port_spin_box()
 
     def _set_up_address_line_edit(self) -> None:
-        line_edit = find_child(
-            self, PySide6.QtWidgets.QLineEdit, "addressLineEdit"
-        )
+        line_edit = find_child(self, PySide6.QtWidgets.QLineEdit, "addressLineEdit")
         slot = self.network_communication.set_address
         line_edit.textChanged.connect(slot)  # type: ignore[attr-defined]
         slot(line_edit.text())
 
     def _set_up_port_spin_box(self) -> None:
         slot = self.network_communication.set_port
-        spin_box = find_child(
-            self, PySide6.QtWidgets.QSpinBox, "portSpinBox"
-        )
+        spin_box = find_child(self, PySide6.QtWidgets.QSpinBox, "portSpinBox")
         spin_box.textChanged.connect(slot)  # type: ignore[attr-defined]
         slot(spin_box.value())
 
     def _set_up_authentication_group_box(self) -> None:
         slot = self.network_communication.set_authentication_enabled
-        group = find_child(
-            self, PySide6.QtWidgets.QGroupBox, "authenticationGroupBox"
-        )
+        group = find_child(self, PySide6.QtWidgets.QGroupBox, "authenticationGroupBox")
         group.toggled.connect(slot)  # type: ignore[attr-defined]
         slot(group.isChecked())
         state_machine = self.state_machine
@@ -405,34 +379,26 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
 
     def _set_up_realm_line_edit(self) -> None:
         slot = self.network_communication.set_realm
-        line_edit = find_child(
-            self, PySide6.QtWidgets.QLineEdit, "realmLineEdit"
-        )
+        line_edit = find_child(self, PySide6.QtWidgets.QLineEdit, "realmLineEdit")
         line_edit.textChanged.connect(slot)  # type: ignore[attr-defined]
         slot(line_edit.text())
 
     def _set_up_user_line_edit(self) -> None:
-        line_edit = find_child(
-            self, PySide6.QtWidgets.QLineEdit, "userLineEdit"
-        )
+        line_edit = find_child(self, PySide6.QtWidgets.QLineEdit, "userLineEdit")
         line_edit.textChanged.connect(  # type: ignore[attr-defined]
             self.network_communication.set_user
         )
         line_edit.setText(secrets.token_urlsafe())
 
     def _set_up_password_line_edit(self) -> None:
-        line_edit = find_child(
-            self, PySide6.QtWidgets.QLineEdit, "passwordLineEdit"
-        )
+        line_edit = find_child(self, PySide6.QtWidgets.QLineEdit, "passwordLineEdit")
         line_edit.textChanged.connect(  # type: ignore[attr-defined]
             self.network_communication.set_password
         )
         line_edit.setText(secrets.token_urlsafe())
 
     def _set_up_host_group_box(self) -> None:
-        group = find_child(
-            self, PySide6.QtWidgets.QGroupBox, "hostGroupBox"
-        )
+        group = find_child(self, PySide6.QtWidgets.QGroupBox, "hostGroupBox")
         state_machine = self.state_machine
         state_machine.host_disabled.assignProperty(
             group, "checked", False  # type: ignore[arg-type]
@@ -494,12 +460,8 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             PySide6.QtWidgets.QPlainTextEdit,
             "hostLogPlainTextEdit",
         )
-        communication.host_stderr_ready.connect(
-            log_text_edit.appendPlainText
-        )
-        communication.host_stdout_ready.connect(
-            log_text_edit.appendPlainText
-        )
+        communication.host_stderr_ready.connect(log_text_edit.appendPlainText)
+        communication.host_stdout_ready.connect(log_text_edit.appendPlainText)
 
     def _set_up_server_status_push_button(self) -> None:
         button = find_child(
@@ -522,17 +484,11 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
 
     def _set_up_server_log_plain_text_edit(self) -> None:
         communication = self.network_communication
-        communication.client_request_sent.connect(
-            self._log_client_request
-        )
-        communication.client_reply_ready.connect(
-            self._log_client_received_reply
-        )
+        communication.client_request_sent.connect(self._log_client_request)
+        communication.client_reply_ready.connect(self._log_client_received_reply)
 
     @PySide6.QtCore.Slot(PySide6.QtNetwork.QNetworkReply)
-    def _log_client_request(
-        self, reply: PySide6.QtNetwork.QNetworkReply
-    ) -> None:
+    def _log_client_request(self, reply: PySide6.QtNetwork.QNetworkReply) -> None:
         request = reply.request()
         url = request.url().toString()
         now = datetime.datetime.now()
@@ -553,9 +509,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         if error is PySide6.QtNetwork.QNetworkReply.NetworkError.NoError:
             QNetworkRequest = PySide6.QtNetwork.QNetworkRequest
             status = str(
-                reply.attribute(
-                    QNetworkRequest.Attribute.HttpStatusCodeAttribute
-                )
+                reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
             )
         else:
             status = typing.cast(bytes, error.name).decode()
@@ -593,16 +547,11 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
 
     def _on_remotes_connection_push_button_pressed(self) -> None:
         communication = self.network_communication
-        if (
-            self.state_machine.host_disabled.active()
-            or communication.is_host_running()
-        ):
+        if self.state_machine.host_disabled.active() or communication.is_host_running():
             communication.post_config_listremotes()
 
     def _set_up_remote_list_widget(self) -> None:
-        signal = (
-            self.network_communication.received_config_listremotes_reply
-        )
+        signal = self.network_communication.received_config_listremotes_reply
         signal.connect(self._update_remote_list_widget_list)
         list_widget = find_child(
             self, PySide6.QtWidgets.QListWidget, "remoteListWidget"
@@ -647,9 +596,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         signal.connect(self._on_reply_finished_to_remote_item_activated)
 
     def _on_reply_finished_to_remote_item_activated(self) -> None:
-        reply = typing.cast(
-            PySide6.QtNetwork.QNetworkReply, self.sender()
-        )
+        reply = typing.cast(PySide6.QtNetwork.QNetworkReply, self.sender())
         if reply.error() == PySide6.QtNetwork.QNetworkReply.NoError:
             remote_control_tool_box = find_child(
                 self,
@@ -665,16 +612,11 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
         else:
             self.statusBar().showMessage(
                 "Failed to list remote.",
-                int(
-                    datetime.timedelta(seconds=2)
-                    / datetime.timedelta(milliseconds=1)
-                ),
+                int(datetime.timedelta(seconds=2) / datetime.timedelta(milliseconds=1)),
             )
 
     def _set_up_browse_tree_widget(self) -> None:
-        signal = (
-            self.network_communication.received_operations_list_reply
-        )
+        signal = self.network_communication.received_operations_list_reply
         signal.connect(self._update_browse_tree_widget_list)
 
     def _update_browse_tree_widget_list(

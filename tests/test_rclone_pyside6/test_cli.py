@@ -11,9 +11,7 @@ import rclone_pyside6.cli
 def test_group_echoes_greetings() -> None:
     group = rclone_pyside6.cli.group
     runner = click.testing.CliRunner(mix_stderr=False)
-    result = runner.invoke(
-        group, ("Alpha", "Beta", "", "Gamma", "Delta")
-    )
+    result = runner.invoke(group, ("Alpha", "Beta", "", "Gamma", "Delta"))
     assert result.stderr == ""
     assert result.stdout.splitlines() == [
         "Hello, Alpha!",

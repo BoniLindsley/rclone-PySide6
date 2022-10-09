@@ -10,9 +10,7 @@ import rclone_pyside6.gui.generated_ui.main_window
 class MainWindow(PySide6.QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.ui = (
-            rclone_pyside6.gui.generated_ui.main_window.Ui_MainWindow()
-        )
+        self.ui = rclone_pyside6.gui.generated_ui.main_window.Ui_MainWindow()
         self.ui.setupUi(self)  # type: ignore[no-untyped-call]
 
 

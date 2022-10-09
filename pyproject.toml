@@ -1,6 +1,4 @@
 [tool.black]
-#line-length = 88
-line-length = 73
 exclude = '\/generated_ui\/'
 
 [tool.coverage.run]
@@ -47,7 +45,9 @@ ignore = [
 ]
 
 [tool.pylint.FORMAT]
-max-line-length = 73
+# Formatter Black uses line lenght of 88 by default.
+# Default is Pylint is 100. So it accepts code formatted by Black.
+#max-line-length = 100
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
