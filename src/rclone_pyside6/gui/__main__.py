@@ -24,21 +24,11 @@ import PySide6.QtStateMachine
 
 # Internal modules.
 from .generated_ui.main_window import Ui_MainWindow
+from .process import find_child
 
 _T_co = typing.TypeVar("_T_co")
 
 _logger = logging.getLogger(__name__)
-
-
-class ChildNotFound(Exception):
-    pass
-
-
-def find_child(parent: PySide6.QtCore.QObject, type_: type[_T_co], name: str) -> _T_co:
-    child = typing.cast(_T_co, parent.findChild(type_, name))
-    if child is None:
-        raise ChildNotFound(f"Unable to find {type_} named {name}.")
-    return child
 
 
 class NetworkCommunication(PySide6.QtCore.QObject):
