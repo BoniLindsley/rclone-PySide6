@@ -28,4 +28,4 @@ class TestUi_MainWindow:  # pylint: disable=invalid-name
         main_window = PySide6.QtWidgets.QMainWindow()
         main_window.setObjectName("MainWindow2")
         ui = rclone_pyside6.gui.generated_ui.main_window.Ui_MainWindow()
-        ui.setupUi(main_window)
+        ui.setupUi(main_window)  # type: ignore[no-untyped-call]

@@ -121,7 +121,7 @@ class NetworkCommunication(PySide6.QtCore.QObject):
         if data is not None:
             encoded_data = json.dumps(data).encode()
             request.setHeader(
-                PySide6.QtNetwork.QNetworkRequest.ContentTypeHeader,
+                PySide6.QtNetwork.QNetworkRequest.KnownHeaders.ContentTypeHeader,
                 "application/json",
             )
         reply = self._client.post(request, encoded_data)
@@ -294,7 +294,10 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
             return
         communication = self.network_communication
         connection_type = PySide6.QtCore.Qt.ConnectionType.SingleShotConnection
-        communication.host_finished.connect(self.close, connection_type)
+        communication.host_finished.connect(
+            self.close,
+            connection_type,  # type: ignore [arg-type]
+        )
         communication.kill_host()
         event.ignore()
 
@@ -597,7 +600,7 @@ class MainWindow(PySide6.QtWidgets.QMainWindow):
 
     def _on_reply_finished_to_remote_item_activated(self) -> None:
         reply = typing.cast(PySide6.QtNetwork.QNetworkReply, self.sender())
-        if reply.error() == PySide6.QtNetwork.QNetworkReply.NoError:
+        if reply.error() == PySide6.QtNetwork.QNetworkReply.NetworkError.NoError:
             remote_control_tool_box = find_child(
                 self,
                 PySide6.QtWidgets.QToolBox,
