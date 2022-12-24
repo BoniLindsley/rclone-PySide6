@@ -75,7 +75,7 @@ class TestRcdServer:
             assert rcd_subprocess.returncode is None
 
         runner = click.testing.CliRunner(mix_stderr=False)
-        result = runner.invoke(command, input="\n")
+        result = runner.invoke(command)
         assert result.stderr == ""
         assert result.stdout == ""
         assert result.exception is None
@@ -103,7 +103,7 @@ class TestRcdServer:
             assert rcd_subprocess_dict[0].returncode is None
 
         runner = click.testing.CliRunner(mix_stderr=False)
-        result = runner.invoke(command, input="\n")
+        result = runner.invoke(command)
         assert result.stderr == ""
         assert result.stdout == ""
         assert result.exception is None
@@ -201,7 +201,7 @@ class TestRcdServer:
         assert "--rc-addr=address:1234" in command
 
 
-def test_cli_default_is_help() -> None:
+def test_cli_prints_help_to_stdout_if_no_subcommand_is_given() -> None:
     runner = click.testing.CliRunner(mix_stderr=False)
     result = runner.invoke(rclone_pyside6.cli.cli)
     assert result.stderr == ""
@@ -211,8 +211,40 @@ def test_cli_default_is_help() -> None:
 
 
 def test_cli_has_stop_subcommand() -> None:
+    """Coverage for group function.
+
+    Group function is not called if there are no subcommand."""
     runner = click.testing.CliRunner(mix_stderr=False)
     result = runner.invoke(rclone_pyside6.cli.cli, ["stop"])
+    assert result.stderr == ""
+    assert result.stdout == ""
+    assert result.exception is None
+    assert result.exit_code == 0
+
+
+def test_repl_as_subcommand() -> None:
+    @click.group()
+    def group() -> None:
+        pass
+
+    group.add_command(rclone_pyside6.cli.repl)
+    runner = click.testing.CliRunner(mix_stderr=False)
+    result = runner.invoke(group, ["repl"])
+    assert result.stderr == ""
+    assert result.stdout == ""
+    assert result.exception is None
+    assert result.exit_code == 0
+
+
+def test_repl_start_does_not_wait() -> None:
+    @click.group()
+    def group() -> None:
+        pass
+
+    group.add_command(rclone_pyside6.cli.repl)
+    group.add_command(rclone_pyside6.cli.start)
+    runner = click.testing.CliRunner(mix_stderr=False)
+    result = runner.invoke(group, ["repl"], input="start\n")
     assert result.stderr == ""
     assert result.stdout == ""
     assert result.exception is None

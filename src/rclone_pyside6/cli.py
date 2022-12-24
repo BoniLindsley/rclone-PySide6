@@ -21,6 +21,8 @@ _T = typing.TypeVar("_T")
 
 _logger = logging.getLogger(__name__)
 
+repl_meta_key = f"{__package__}.repl_layer_count"
+
 
 def kill_subprocesses(process: subprocess.Popen[bytes]) -> None:  # pragma: no cover
     if platform.system() == "Windows":
@@ -138,9 +140,22 @@ def cli() -> None:
 
 
 @cli.command()
+@click.pass_context
+def repl(ctx: click.Context) -> None:
+    ctx.meta.setdefault(repl_meta_key, 0)
+    ctx.meta[repl_meta_key] += 1
+    click_repl.repl(ctx)
+    ctx.meta[repl_meta_key] -= 1
+
+
+@cli.command()
 @RcdServer.pass_to_command
-def start(rcd_server: RcdServer) -> None:
+@click.pass_context
+def start(ctx: click.Context, rcd_server: RcdServer) -> None:
     rcd_server.start()
+    if ctx.meta.get(repl_meta_key, 0) <= 0:
+        click.pause("Press any key to stop...\n")
+        rcd_server.stop()
 
 
 @cli.command()
@@ -150,7 +165,6 @@ def stop(rcd_server: RcdServer) -> None:
 
 
 def main() -> int:  # pragma: no cover
-    click_repl.register_repl(cli)
     cli()
     return 0
 
