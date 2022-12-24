@@ -131,12 +131,15 @@ class TestRcdServer:
         rcd_server.start()
         rcd_subprocess = rcd_server.rcd_subprocess
         assert isinstance(rcd_subprocess, subprocess.Popen)
-        with rcd_subprocess:
+        try:
             assert rcd_subprocess.returncode is None
 
             rcd_server.stop()
             assert rcd_server.rcd_subprocess is None
             assert rcd_subprocess.returncode is not None
+        finally:
+            rclone_pyside6.cli.kill_subprocesses(rcd_subprocess)
+            rcd_subprocess.communicate()
 
     def test_start_ignores_restart(self) -> None:
         rcd_server = RcdServer()
@@ -145,12 +148,15 @@ class TestRcdServer:
         rcd_server.start()
         rcd_subprocess = rcd_server.rcd_subprocess
         assert isinstance(rcd_subprocess, subprocess.Popen)
-        with rcd_subprocess:
+        try:
             assert rcd_subprocess.returncode is None
 
             rcd_server.start()
             rcd_subprocess_2 = rcd_server.rcd_subprocess
             assert rcd_subprocess is rcd_subprocess_2
+        finally:
+            rclone_pyside6.cli.kill_subprocesses(rcd_subprocess)
+            rcd_subprocess.communicate()
 
     def test_stop_is_okay_if_not_started(self) -> None:
         rcd_server = RcdServer()
@@ -165,7 +171,7 @@ class TestRcdServer:
         rcd_server.start()
         rcd_subprocess = rcd_server.rcd_subprocess
         assert isinstance(rcd_subprocess, subprocess.Popen)
-        with rcd_subprocess:
+        try:
             assert rcd_subprocess.returncode is None
             rclone_pyside6.cli.kill_subprocesses(rcd_subprocess)
             rcd_subprocess.communicate()
@@ -174,6 +180,9 @@ class TestRcdServer:
             assert rcd_server.rcd_subprocess is not None
             rcd_server.stop()
             assert rcd_server.rcd_subprocess is None
+        finally:
+            rclone_pyside6.cli.kill_subprocesses(rcd_subprocess)
+            rcd_subprocess.communicate()
 
     def test_create_rcd_command_gives_rclone_command(self) -> None:
         rcd_server = RcdServer()
